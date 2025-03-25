@@ -1,2 +1,2 @@
 # ENE331_Project
- Project for Class
+ Project Hand on for Class
