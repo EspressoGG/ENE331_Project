@@ -37,10 +37,10 @@
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
 uint32_t lastTime_1;
-uint32_t Settime_1 = 6000;
+uint32_t Settime_1 = 60;
 
 uint32_t lastTime_2;
-uint32_t Settime_2 = 800;
+uint32_t Settime_2 = 500;
 
 uint32_t counter = 0;
 
@@ -61,41 +61,35 @@ void GPIOA_Config(void) {
 	GPIOA->MODER &= ~((0x3 << (1 * 2)) | (0x3 << (2 * 2)) | (0x3 << (3 * 2)));
 	GPIOA->MODER |=  ((0x1 << (1 * 2)) | (0x1 << (2 * 2)) | (0x1 << (3 * 2))); // '01' = output
 
-	// PA6: Set as alternate function (Timer2 CH1)
-	GPIOA->MODER &= ~(0x3 << (6 * 2));  // Clear MODER6
-	GPIOA->MODER |=  (0x2 << (6 * 2));  // '10' = alternate function
+
 
 	// OTYPER: All push-pull
-	GPIOA->OTYPER &= ~((1 << 1) | (1 << 2) | (1 << 3) | (1 << 6));
+	GPIOA->OTYPER &= ~((1 << 1) | (1 << 2) | (1 << 3) );
 
 	// No pull-up/pull-down
-	GPIOA->PUPDR &= ~((0x3 << (1 * 2)) | (0x3 << (2 * 2)) | (0x3 << (3 * 2)) | (0x3 << (6 * 2)));
+	GPIOA->PUPDR &= ~((0x3 << (1 * 2)) | (0x3 << (2 * 2)) | (0x3 << (3 * 2))  );
 
-	// Set alternate function for PA6 → AF1 = TIM2_CH1
-	// PA6 = AFRL[6] = bits 27:24
-	GPIOA->AFR[0] &= ~(0xF << (6 * 4));
-	GPIOA->AFR[0] |=  (0x1 << (6 * 4));  // AF1
 }
 unsigned char Read_PA0(void) {
 	return (GPIOA->IDR & (1 << 0)) ? 1 : 0;
 }
 
 void GPIOB_Config(void) {
-    // Enable GPIOB clock
-    RCC->AHB1ENR |= (1 << 1);
+	// Enable GPIOB Clock
+	RCC -> AHB1ENR |= (0x01 << 1);
 
-    // Set PB10 to Alternate Function Mode (MODER10 = b10)
-    GPIOB->MODER &= ~(0x3 << 20);  // Clear bits 21:20
-    GPIOB->MODER |=  (0x2 << 20);  // Set bits 21:20 to 10 (AF mode)
+	// Config PB10 as Output
+	GPIOB -> MODER |= (0x01 << (10* 2));
 
-    // Set Alternate Function AF1 for TIM2_CH3 on PB10
-    // AFR[1] is used for PB8–PB15 → PB10 = AFR[1] bits 11:8
-    GPIOB->AFR[1] &= ~(0xF << 8);  // Clear bits for PB10
-    GPIOB->AFR[1] |=  (0x1 << 8);  // AF1 = TIM2_CH3
+    // Set output type
+    // ALL GPIO (PB10) is  Output push-pull
+	GPIOB-> OTYPER &= (0x00);
 
-    // Optional: Set push-pull and no pull-up/down
-    GPIOB->OTYPER &= ~(1 << 10);    // Push-pull
-    GPIOB->PUPDR  &= ~(0x3 << 20);  // No pull
+	// ALL GPIO (PBB10) Speed is High speed Output
+	GPIOB -> OSPEEDR &= ~(0x00);
+
+	// Disable PB10  pull-up
+	GPIOB->PUPDR |= (0x00 << (10 * 2));
 }
 
 
@@ -111,27 +105,11 @@ void GPIO_Toggle_Config(void) {
     // Set output type
     GPIOA -> OTYPER &= ~(0x01 << 6);  // Push-pull for PA6
 
-    // Set GPIO Speed (optional)
-    GPIOA -> OSPEEDR &= ~(0x03 << (6 * 2));  // Low speed for PA6 (default)
 
     // Disable pull-up/pull-down
     GPIOA -> PUPDR &= ~(0x03 << (6 * 2));   // No pull-up/pull-down for PA6
 }
 
-void TIM2_PWM_Init(void) {
-	// Enable TIM2 clock
-	    RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
-
-	    // Configure PWM mode (PWM Mode 1)
-	    TIM2->CCMR2 &= ~(TIM_CCMR2_OC3M);    // Clear OC3M bits
-	    TIM2->CCMR2 |= TIM_CCMR2_OC3M_1 | TIM_CCMR2_OC3M_2;  // Set to PWM Mode 1
-
-	    // Enable PWM output on TIM2 Channel 3 (PB10)
-	    TIM2->CCER |= TIM_CCER_CC3E;         // Enable output on TIM2 Channel 3
-
-	    // Start the timer
-	    TIM2->CR1 |= TIM_CR1_CEN;            // Enable TIM2
-    }
 
 //	// Enable GPIOC Clock
 //	RCC -> AHB1ENR |= (0x01 << 2);
@@ -149,6 +127,7 @@ void TIM2_PWM_Init(void) {
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
 	if(htim -> Instance == TIM2) {
 		counter++;
+		GPIOB -> ODR ^= (1 << 10);
 	}
 }
 
@@ -206,12 +185,14 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_TIM2_Init();
+
   /* USER CODE BEGIN 2 */
-  HAL_TIM_Base_Start(&htim2);
+
   GPIOA_Config();
   GPIOB_Config();
   GPIO_Toggle_Config();
-  TIM2_PWM_Init();           // Initialize TIM2 for PWM output
+  HAL_TIM_Base_Start(&htim2);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
