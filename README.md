@@ -1,6 +1,4 @@
 # ENE331_Project
  Project Hand on for Class
 
-Homework 1
-
-Link to the helpful section: [Link Text](#thisll-be-a-helpful-section-about-the-greek-letter-Θ).
+[HW 1 LAB CHALLENGE](#https://github.com/EspressoGG/ENE331_Project/tree/ENE331-LAB/ENE331_2484_2501_2504).
